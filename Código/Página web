@@ -55,7 +55,7 @@ ui <- dashboardPage(
             font-weight: bold;
           }
           .bienvenida-background {
-        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/background_03.png');
+        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Imágenes/background.png');
         background-repeat: no-repeat;
         background-size: cover;
           }
