@@ -1,0 +1,461 @@
+# Este es el código para el desarrollo de la página web
+
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(rmarkdown)
+library(shinydashboardPlus)
+library(shinyjs)
+library(openxlsx)
+library(httr)
+library(knitr)
+
+# Load the data from the CSV files
+high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/High_Income_con_CCAA.csv")
+low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/Low_Income_con_CCAA.csv")
+
+# Round the values
+high_income <- high_income %>%
+  mutate(Dissimilarity_Index = round(Dissimilarity_Index, 4))
+
+low_income <- low_income %>%
+  mutate(Dissimilarity_Index = round(Dissimilarity_Index, 4))
+
+# Define the UI
+ui <- dashboardPage(
+  skin = "midnight",
+  dashboardHeader(title = "Menú"),
+  dashboardSidebar(
+    sidebarMenu(
+      id = "sidebar",
+      menuItem("Bienvenida", tabName = "bienvenida", icon = icon("home")),
+      menuItem("Datos", tabName = "datos", icon = icon("dashboard")),
+      menuItem("Mapas", tabName = "mapas", icon = icon("map")),
+      menuItem("Alquiler", tabName = "alquiler", icon = icon("home")),
+      menuItem("Informe", tabName = "informe", icon = icon("file-pdf")),
+      menuItem("Acerca de", tabName = "acerca", icon = icon("info-circle"))
+    )
+  ),
+  dashboardBody(
+    tags$head(
+      tags$style(HTML("
+          .select-label { color: black; font-weight: bold; }
+          .rounded-rectangle {
+            background-color: #f2f2f2;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+          }
+          .shadow-text {
+            text-shadow: 2px 2px 4px #000000;
+          }
+          .bold-text {
+            font-weight: bold;
+          }
+          .bienvenida-background {
+        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/background_03.png');
+        background-repeat: no-repeat;
+        background-size: cover;
+          }
+      .rounded-rectangle2 {
+            background-color: #353c42;
+            border-radius: 10px;
+            padding: 1px;
+            margin-bottom: 0px;
+          }
+        ")
+      ),
+      
+    ),
+    tabItems(
+      # welcome tab content
+      tabItem(tabName = "bienvenida", class = "bienvenida-background",
+              fluidRow(
+                column(
+                  align = "center",
+                  width = 12,
+                  div(class = "rounded-rectangle2",
+                      h1(class = "shadow-text", style = "color: white;", "Ricos y pobres: ¿misma ciudad, distintos barrios?"),
+                      h3(class = "shadow-text", style = "color: white;", "Explora la evolución de la segregación residencial por ingresos en cada municipio del país"),
+                      actionButton("startExploring", "¡Comienza a explorar!", class = "btn-lg", style = "background-color: white; color: #353c41;"),
+                      br(),
+                      br(),
+                      div(class = "rounded-rectangle",
+                          h3(style = "color: #353c41;", "¿Qué es la segregación residencial?"),
+                          p(style = "color: #353c41;", "El término segregación hace referencia al grado de separación geográfica entre un grupo de personas y otro. Los estudios sobre segregación residencial exploran en qué medida diferentes grupos sociales conviven en el mismo barrio o habitan en vecindarios diferentes. En muchas ciudades de España y del mundo, las personas con mayores y menores ingresos viven cada vez más alejadas entre sí. Este fenómeno puede suponer un problema para la cohesión social y la igualdad de oportunidades.")
+                      )
+                  ),
+                ),
+                column(12,
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),
+                       br(),),
+                column(12,
+                       column(
+                         align = "center",
+                         width = 4,
+                         div(class = "rounded-rectangle",
+                             h3(class = "bold-text", align = "center", style = "color: #353c41;", "Informes para la Ley por el derecho a la vivienda"),
+                             p(style = "text-align: justify; color: #353c41;", "Esta página web también te permite generar un estudio de la segregación residencial en formato PDF para el municipio que eligas. Este informe proporciona una visión más detallada de las desigualdades socio-espaciales en la localidad de elección y puede ser utilizado para el procedimiento administrativo de declaración de zona de mercado residencial tensionado de la Ley 12/2023, de 24 de mayo, por el derecho a la vivienda."),
+                             actionButton("startReport", "Ir a la generación de informes", align = "center", class = "btn-lg", style = "background-color: white; color: #353c41;"),
+                         )),
+                       column(
+                         align = "center",
+                         width = 4,
+                         div(class = "rounded-rectangle",    
+                             h3(class = "bold-text", align = "center", style = "color: #353c41;", "Distribución de la población en función de los ingresos"),
+                             p(style = "text-align: justify; color: #353c41;", "La segregación residencial por ingresos es el resultado de la concentración de la población más rica y la población más pobre en lugares diferentes del territorio. Esta página web incorpora un mapa interactivo que te permite observar la distribución desigual de la renta por el país. Con esta herramienta puedes explorar el porcentaje de hogares con ingresos altos y bajos por sección censal, distrito y municipio a lo largo de toda España."),
+                             actionButton("startMapping", "Mapas de renta", align = "center", class = "btn-lg", style = "background-color: white; color: #353c41;"),
+                         )),
+                       column(
+                         align = "center",
+                         width = 4,
+                         div(class = "rounded-rectangle", 
+                             h3(class = "bold-text", align = "center", style = "color: #353c41;", "La situación del mercado del alquiler en España"),
+                             p(style = "text-align: justify; color: #353c41;", "Uno de los determinantes más importantes de la segregación residencial es la situación del alquiler. Los altos precios de la vivienda limitan las opciones residenciales de las personas de bajos ingresos, que pueden acabar concentradas en las áreas más desfavorecidas del territorio. Con esta página web puedes investigar las diferentes características del mercado del alquiler por sección censal, distrito y municipio."),
+                             actionButton("startMapping2", "Mapas sobre el alquiler", align = "center", class = "btn-lg", style = "background-color: white; color: #353c41;")
+                         ))
+                ),
+              )
+              
+      ),
+      # "Datos" tab content
+      tabItem(tabName = "datos",
+              sidebarLayout(
+                sidebarPanel(
+                  selectInput("region", label = tags$span("Elige una comunidad autónoma:",
+                                                          class = "select-label"), choices = NULL),
+                  selectInput("municipality", label = tags$span("Elige un municipio:",
+                                                                class = "select-label"), choices = NULL),
+                  selectInput("database",
+                              label = tags$span("Elige qué tipo de segregación residencial quieres visualizar:",
+                                                class = "select-label"),
+                              choices = c("Segregación de la población rica" = "high_income",
+                                          "Segregación de la población pobre" = "low_income")),
+                  helpText(style = "text-align: justify;", "La segregación de la población rica hace referencia a la segregación de los hogares con ingresos superiores al 200% de la mediana respecto al resto de la población."),
+                  helpText(style = "text-align: justify;", "La segregación de la población pobre hace referencia a la segregación de los hogares con ingresos inferiores al umbral de la pobreza respecto al resto de la población."),
+                  downloadButton("downloadGraph", "Descargar gráfico"),
+                  downloadButton("downloadData", "Descargar datos")
+                ),
+                mainPanel(
+                  plotOutput("plot", height = "470px")
+                )
+              ),
+              br(),
+              div(class = "rounded-rectangle",
+                  h4(style = "color: black", "Nota metodológica:"),
+                  p(style = "color: #353c41;", "Esta página web mide la segregación residencial a través de un indicador conocido como el Índice de Disimilitud. Este índice calcula la proporción de la población de una determinada localidad que debería mudarse a otra parte del municipio para que todos los grupos sociales se distribuyesen homogéneamente por el territorio. Por ejemplo, en 2015 y en el municipio andaluz de Adamuz, un 17,47% de los hogares debería cambiar de residencia dentro de la ciudad para conseguir una distribución homogénea de la población más rica. Los valores más próximos a 1 indican niveles altos de segregación, mientras que los cercanos a 0 reflejan niveles bajos. La fórmula del Índice de Disimilitud viene dada por:"),
+                  tags$img(src = "https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/Formula4.png", style = "display: block; margin: 0 auto;", width = "160px", height = "auto"),
+                  p(style = "color: #353c41; margin-top: 0.1em;", "Donde:",
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", tags$b("D"), "= Índice de Disimilitud."),
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", tags$b("x"), "= población del grupo de interés (bien los hogares con ingresos superiores al 200% de la mediana, bien los hogares por debajo del umbral de la pobreza) en una sección censal."),
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", tags$b("X"), "= población total del grupo de interés en el municipio para el que se está calculando el Índice de Disimilitud."),
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", tags$b("y"), "= el resto de la población en una sección censal."),
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", tags$b("Y"), "= el resto de la población en el municipio para el que se está calculando el Índice de Disimilitud."),
+                    br(),
+                    tags$p(style = "color: #353c41; margin-bottom: 0.1em;", "No se muestran localidades con menos de dos secciones censales y de Navarra y Álava por falta de datos. De un total de 8131 municipios en el país, se dispone de información de 2176.")
+                  ),
+                  br(),
+                  h4(style = "color: black", "Referencia:"),
+                  p(style = "color: #353c41;", "Duncan, O. D., & Duncan, B. (1955). A methodological analysis of segregation indexes.", tags$i("American Sociological Review,"),"20(2), 210-217.")
+              ),
+      ),
+      # "mapas" tab content
+      tabItem(tabName = "mapas",
+              selectInput("mapType", "Selecciona qué tipo de mapa quieres ver:",
+                          choices = c("Distribución de la población más rica", "Distribución de la población en situación de pobreza"),
+                          width = "400px"),
+              uiOutput("mapOutput"),
+              p(style = "color: #EBEBEB;", "Fuente: Sitio web del INE: www.ine.es")
+      ),
+      # "alquiler" tab content
+      tabItem(tabName = "alquiler",
+              selectInput("mapType2", "Selecciona qué tipo de mapa del alquiler quieres ver:",
+                          choices = c("Por secciones censales", "Por distritos", "Por municipios", "Por provincias", "Por CCAA"),
+                          width = "400px"),
+              uiOutput("mapOutput2"),
+              p(style = "color: #EBEBEB;", "Fuente: Sitio web del INE: www.ine.es")
+              
+      ),
+      # "informe" tab content
+      tabItem(tabName = "informe",
+              titlePanel("Generador de un informe de análisis de la segregación residencial a los efectos de la Ley 12/2023, de 24 de mayo, por el derecho a la vivienda"),
+              br(),
+              sidebarLayout(
+                sidebarPanel(
+                  selectInput("regionInput", label = tags$span("Elige una comunidad autónoma:",
+                                                               class = "select-label"),
+                              choices = sort(unique(c(high_income$CCAA, low_income$CCAA)))),
+                  selectInput("municipalityInput", label = tags$span("Elige un municipio:",
+                                                                     class = "select-label"),
+                              choices = NULL),
+                  downloadButton("generatePDF", "Generar PDF"),
+                  br(),
+                  br(),
+                  helpText(style = "text-align: justify", "La Ley 12/2023, de 24 de mayo, por el derecho a la vivienda prevé en su artículo 18 un procedimiento administrativo para la declaración de una zona de mercado residencial tensionado. Esta declaración permite, junto con otras medidas, la implementación de límites al precio del alquiler. En el procedimiento administrativo previsto para la declaración de mercado tensionado debe obtenerse y publicarse información sobre la situación de la vivienda en la zona en cuestión que justifique la aplicación de medidas extraordinarias de intervención pública. Entre otros elementos, la ley prevé explícitamente la elaboración de estudios sobre procesos de segregación socio-espacial en detrimento de la cohesión social y territorial. Esta página web permite generar un informe de análisis de la segregación residencial en cualquiera de los municipios más poblados de España a los efectos de este procedimiento administrativo."),
+                  tags$b(style = "color: #737373","Elaboración propia con datos extraídos del sitio web del INE: www.ine.es")
+                ),
+                
+                mainPanel(uiOutput("pdfViewer")),
+                
+              ),
+      ),
+      # About us:
+      #This website was created and is maintained by Javier San Millán Tejedor, a PhD student at TU Delft, in collaboration with José Ariza de la Cruz, PhD student at the Complutense University of Madrid. Javier's dissertation is dedicated to the analysis of the determinants of residential segregation in cities of the Netherlands, supervised by Dr. Clémentine Cottineau and Prof. Maarten van Ham (TU Delft Urbanism) and funded by the ERC Starting Grant SEGUE (101039455). To know more about this project, follow @ERC_SEGUE on Twitter”
+      # "acerca de" tab content
+      tabItem(tabName = "acerca",
+              div(class = "rounded-rectangle",
+                  h3(style = "color: #353c41;", "¿Quiénes somos?"),
+                  p(style = "color: #353c41; text-align: justify;", "Esta página web ha sido creada por Javier San Millán Tejedor, investigador predoctoral en la Universidad Técnica de Delft (TU Delft, Países Bajos), en colaboración con José Ariza de la Cruz, doctorando en la Universidad Complutense de Madrid. Esta página se enmarca dentro del proyecto de tesis doctoral de Javier San Millán, que investiga los determinantes de la segregación residencial en diferentes ciudades de Países Bajos, bajo la supervisión de Dr. Clémentine Cottineau y Prof. Maarten van Ham (TU Delft Urbanism) y financiado por la ERC Starting Grant SEGUE (101039455)."),
+                  h4(style = "color: #353c41;", "¡Síguenos en Twitter para mantenerte al tanto de las novedades!"),
+                  tags$head(
+                    tags$style(HTML(".twitter-button { cursor: pointer; }"))
+                  ),
+                  tags$a(href = "https://twitter.com/ERC_SEGUE", target = "_blank",
+                         tags$img(src = "https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/image_twitter.png", class = "twitter-button", width = "50px", height = "50px")),
+                  p(style = "color: #353c41;", "@ERC_SEGUE")
+              ),
+      )
+    )
+  )
+)
+
+# Define the server
+server <- function(input, output, session) {
+  
+  # Update the choices of the "database" input based on regions
+  observeEvent(input$database, {
+    if (input$database == "Segregación de la población rica") {
+      choices <- sort(unique(high_income$CCAA))
+    } else {
+      choices <- sort(unique(low_income$CCAA))
+    }
+    updateSelectInput(session, "region", choices = choices)
+    updateSelectInput(session, "municipality", choices = NULL)
+  })
+  
+  # Update the choices of the "municipality" input based on the selected region
+  observeEvent(input$region, {
+    if (input$database == "Segregación de la población rica") {
+      choices <- sort(unique(high_income$Municipality[high_income$CCAA == input$region]))
+    } else {
+      choices <- sort(unique(low_income$Municipality[low_income$CCAA == input$region]))
+    }
+    updateSelectInput(session, "municipality", choices = choices)
+  })
+  
+  # Disable the "region" dropdown until the database is selected
+  observe({
+    if (is.null(input$database)) {
+      shinyjs::disable("region")
+    } else {
+      shinyjs::enable("region")
+    }
+  })
+  
+  #Display the plot of the evolution of the Dissimilarity Index
+  
+  output$plot <- renderPlot({
+    # Filter the data based on the chosen municipality and the years 2015-2020
+    if (input$database == "high_income") {
+      data <- high_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+    } else {
+      data <- low_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+    }
+    # Create a line plot of the evolution of the Dissimilarity Index
+    ggplot(data, aes(x = Year, y = Dissimilarity_Index)) +
+      geom_line() +
+      geom_text(aes(label = Dissimilarity_Index), vjust = -1) +
+      geom_point() +
+      xlab("Año") + ylab("Nivel de segregación (Índice de Disimilitud)") +
+      ggtitle(paste("Segregación residencial en", input$municipality)) +
+      theme(
+        panel.background = element_rect(fill = "#EBEBEB"),
+        plot.background = element_rect(fill = "#f6f6f5"),
+        plot.margin = margin(15, 25, 10, 20, "pt")
+      ) +
+      expand_limits(y = max(data$Dissimilarity_Index) + 0.02) + expand_limits(x = min(data$Year) - 0.2) + expand_limits(x = max(data$Year) + 0.2) +
+      scale_x_continuous(breaks = data$Year, labels = data$Year, expand = c(0.02, 0)) +
+      labs(caption = "Elaboración propia con datos extraídos del sitio web del INE: https://www.ine.es/")
+  })
+  
+  observeEvent(input$mapType, {
+    if (input$mapType == "Distribución de la población más rica") {
+      output$mapOutput <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://www.arcgis.com/apps/webappviewer/index.html?id=11e08c276faf4686b2dc61bfe527c902&center=-415056.8087%2C4947743.3908%2C102100&scale=9244648.868618")
+      })
+    } else if (input$mapType == "Distribución de la población en situación de pobreza") {
+      output$mapOutput <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://www.arcgis.com/apps/webappviewer/index.html?id=f0a813eebb8d4a9c89d9b174f75ca7c8&center=-412613.8677%2C4935513.4861%2C102100&scale=9244648.868618")
+      })
+    }
+  })
+  
+  observeEvent(input$mapType2, {
+    if (input$mapType2 == "Por secciones censales") {
+      output$mapOutput2 <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://mapas.fomento.gob.es/portal/apps/View/index.html?appid=f72a9a7e7401486eb87bc516269d0ded")
+      })
+    } else if (input$mapType2 == "Por distritos") {
+      output$mapOutput2 <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://mapas.fomento.gob.es/portal/apps/View/index.html?appid=edf67e551d724f678f8b880300f377b8")
+      })
+    } else if (input$mapType2 == "Por municipios") {
+      output$mapOutput2 <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://mapas.fomento.gob.es/portal/apps/View/index.html?appid=5e8f554eeeff4599a60fd4e6c71cc65a")
+      })
+    } else if (input$mapType2 == "Por provincias") {
+      output$mapOutput2 <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://mapas.fomento.gob.es/portal/apps/View/index.html?appid=b54fa8ced3894ef3a8ad5c6f6e9b8900")
+      })
+    } else if (input$mapType2 == "Por CCAA") {
+      output$mapOutput2 <- renderUI({
+        tags$iframe(width = "100%", height = "720", frameborder = "0", scrolling = "no",
+                    allowfullscreen = "true", src = "https://mapas.fomento.gob.es/portal/apps/View/index.html?appid=a958580387d74bb59954f8c4bbc31d3c")
+      })
+    }
+  })
+  
+  # Generate the PDF
+  
+  pdfContent <- reactiveVal(NULL)  # Define reactive value
+  
+  observeEvent(input$regionInput, {
+    # Filter the municipalities based on the selected region
+    municipalities <- unique(high_income$Municipality[high_income$CCAA == input$regionInput])
+    updateSelectInput(session, "municipalityInput", choices = municipalities)
+    
+  })
+  
+  output$generatePDF <- downloadHandler(
+    filename = "Estudio_segregación_residencial.pdf",
+    content = function(file) {
+      # Copy the report file to a temporary directory before processing it, in
+      # case we don't have write permissions to the current working dir (which
+      # can happen when deployed).
+      tempReport <- file.path(tempdir(), "report.Rmd")
+      file.copy("17_project.Rmd", tempReport, overwrite = TRUE)
+      
+      # Set up parameters to pass to Rmd document
+      params <- list(selected_municipality = input$municipalityInput)
+      
+      # Knit the document, passing in the `params` list, and eval it in a
+      # child of the global environment (this isolates the code in the document
+      # from the code in this app).
+      rmarkdown::render(tempReport, output_file = file,
+                        params = params,
+                        envir = new.env(parent = globalenv())
+      )
+      # Read the generated PDF file as a binary and encode it as base64
+      pdfContent(base64enc::base64encode(file))
+    }
+  )
+  
+  
+  
+  # Render the PDF viewer
+  output$pdfViewer <- renderUI({
+    if (!is.null(input$municipalityInput)) {
+      tags$iframe(
+        style = "height: 668px; width: 100%;",
+        src = paste("data:application/pdf;base64,", pdfContent()),
+        id = "pdfIframe"
+      )
+    } else {
+      NULL
+    }
+  })
+  
+  # Direct the user to the "Datos" tab when pressing the "Comenzar a explorar" button
+  observeEvent(input$startExploring, {
+    updateTabItems(session, "sidebar", selected = "datos")
+  })
+  
+  # Direct the user to the "Mapas" tab when pressing the "Mapas de la distribución de la renta" button
+  observeEvent(input$startMapping, {
+    updateTabItems(session, "sidebar", selected = "mapas")
+  })
+  
+  # Direct the user to the "alquiler" tab when pressing the "Mapas del alquiler" button
+  observeEvent(input$startMapping2, {
+    updateTabItems(session, "sidebar", selected = "alquiler")
+  })
+  
+  # Direct the user to the "infome" tab when pressing the "Mapas del alquiler" button
+  observeEvent(input$startReport, {
+    updateTabItems(session, "sidebar", selected = "informe")
+  })
+  
+  # Download data and graphs
+  output$downloadGraph <- downloadHandler(
+    filename = function() {
+      paste0(input$municipality, ".png")
+    },
+    content = function(file) {
+      ggsave(file, plot = {
+        # Filter the data based on the chosen municipality and the years 2015-2020
+        if (input$database == "high_income") {
+          data <- high_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+        } else {
+          data <- low_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+        }
+        # Create a line plot of the evolution of the Dissimilarity Index
+        ggplot(data, aes(x = Year, y = Dissimilarity_Index)) +
+          geom_line() +
+          geom_text(aes(label = Dissimilarity_Index), vjust = -1) +
+          geom_point() +
+          xlab("Año") + ylab("Nivel de segregación (Índice de Disimilitud)") +
+          ggtitle(paste("Evolución de la segregación residencial en", input$municipality)) +
+          theme(
+            panel.background = element_rect(fill = "#EBEBEB"),
+            plot.background = element_rect(fill = "#f6f6f5"),
+            plot.margin = margin(15, 25, 10, 20, "pt")
+          ) +
+          expand_limits(y = max(data$Dissimilarity_Index) + 0.03)
+      }, device = "png", width = 8, height = 6, units = "in")
+    }
+  )
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste0(input$municipality, ".xlsx")
+    },
+    content = function(file) {
+      # Filter the data based on the chosen municipality and the years 2015-2020
+      if (input$database == "high_income") {
+        data <- high_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+      } else {
+        data <- low_income %>% filter(Municipality == input$municipality, Year >= 2015 & Year <= 2020)
+      }
+      
+      # Save the filtered data as an Excel file
+      write.xlsx(data, file, row.names = FALSE)
+    }
+  )
+}
+
+# Run the application
+
+shinyApp(ui, server)
