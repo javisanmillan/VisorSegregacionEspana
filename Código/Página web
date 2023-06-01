@@ -55,7 +55,7 @@ ui <- dashboardPage(
             font-weight: bold;
           }
           .bienvenida-background {
-        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Imágenes/background.png');
+        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/background_03.png');
         background-repeat: no-repeat;
         background-size: cover;
           }
@@ -230,7 +230,16 @@ ui <- dashboardPage(
                   ),
                   tags$a(href = "https://twitter.com/ERC_SEGUE", target = "_blank",
                          tags$img(src = "https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Imágenes/logo_twitter.png", class = "twitter-button", width = "50px", height = "50px")),
-                  p(style = "color: #353c41;", "@ERC_SEGUE")
+                  p(style = "color: #353c41;", "@ERC_SEGUE"),
+                  # https://github.com/javisanmillan/VisorSegregacionEspana/tree/main
+                  h3(style = "color: #353c41;", "¿Dónde puedo acceder a los datos completos?"),
+                  p(style = "color: #353c41;", "Siguiendo los principios de ciencia abierta, todos lós códigos y datos utilizados para esta herramienta se encuentran en abierto."),
+                  actionButton("codigo", "Acceder al código", align = "center", class = "btn-lg", style = "background-color: white; color: #353c41;"),
+                  tags$script("
+    $(document).on('click', '#codigo', function(){
+      window.open('https://github.com/javisanmillan/VisorSegregacionEspana', '_blank');
+    });
+  ")
               ),
       )
     )
@@ -402,11 +411,6 @@ server <- function(input, output, session) {
   # Direct the user to the "alquiler" tab when pressing the "Mapas del alquiler" button
   observeEvent(input$startMapping2, {
     updateTabItems(session, "sidebar", selected = "alquiler")
-  })
-  
-  # Direct the user to the "infome" tab when pressing the "Mapas del alquiler" button
-  observeEvent(input$startReport, {
-    updateTabItems(session, "sidebar", selected = "informe")
   })
   
   # Download data and graphs
