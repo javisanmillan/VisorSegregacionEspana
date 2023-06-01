@@ -1,10 +1,10 @@
 library(readxl)
 library(dplyr)
-Municipios_y_CCAA <- read_excel("~/Desktop/Visor Ley de Vivienda/Municipios y CCAA_modificado.xlsx")
+Municipios_y_CCAA <- read_excel("https://github.com/javisanmillan/VisorSegregacionEspana/raw/main/Datos%20auxiliares/Municipios%20y%20CCAA.xlsx")
 
 # Load the data from the CSV files
-high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/High_Income_Database.csv")
-low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/Low_Income_Database.csv")
+high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Datos/High_Income_con_CCAA.csv")
+low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Datos/Low_Income_con_CCAA.csv")
 
 High_Income_CCAA <- merge(high_income, Municipios_y_CCAA, by.x = "Municipality",  by.y = "Municipio", all.x = TRUE, all.y = FALSE)
 Low_Income_CCAA <- merge(low_income, Municipios_y_CCAA, by.x = "Municipality",  by.y = "Municipio", all.x = TRUE, all.y = FALSE)
