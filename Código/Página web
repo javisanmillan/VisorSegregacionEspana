@@ -13,8 +13,8 @@ library(httr)
 library(knitr)
 
 # Load the data from the CSV files
-high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/High_Income_con_CCAA.csv")
-low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/Low_Income_con_CCAA.csv")
+high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Datos/High_Income_con_CCAA.csv")
+low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Datos/Low_Income_con_CCAA.csv")
 
 # Round the values
 high_income <- high_income %>%
@@ -55,7 +55,7 @@ ui <- dashboardPage(
             font-weight: bold;
           }
           .bienvenida-background {
-        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/background_03.png');
+        background-image: url('https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Imágenes/background.png');
         background-repeat: no-repeat;
         background-size: cover;
           }
@@ -229,7 +229,7 @@ ui <- dashboardPage(
                     tags$style(HTML(".twitter-button { cursor: pointer; }"))
                   ),
                   tags$a(href = "https://twitter.com/ERC_SEGUE", target = "_blank",
-                         tags$img(src = "https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Images/image_twitter.png", class = "twitter-button", width = "50px", height = "50px")),
+                         tags$img(src = "https://raw.githubusercontent.com/javisanmillan/VisorSegregacionEspana/main/Imágenes/logo_twitter.png", class = "twitter-button", width = "50px", height = "50px")),
                   p(style = "color: #353c41;", "@ERC_SEGUE")
               ),
       )
@@ -357,7 +357,7 @@ server <- function(input, output, session) {
       # case we don't have write permissions to the current working dir (which
       # can happen when deployed).
       tempReport <- file.path(tempdir(), "report.Rmd")
-      file.copy("17_project.Rmd", tempReport, overwrite = TRUE)
+      file.copy("V1_published_version.Rmd", tempReport, overwrite = TRUE)
       
       # Set up parameters to pass to Rmd document
       params <- list(selected_municipality = input$municipalityInput)
