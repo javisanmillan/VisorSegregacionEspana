@@ -1,0 +1,252 @@
+---
+output: 
+  pdf_document:
+    fig_width: 8
+    fig_height: 4
+params:
+  selected_municipality: NA
+---
+# Estudio de la segregación socio-espacial en `r params$selected_municipality`
+
+```{r, eval = FALSE, echo = FALSE}
+# The `params` object is available in the document.
+params$selected_municipality
+library(ggplot2)
+```
+# Introducción
+La segregación residencial constituye una creciente amenaza a la cohesión y la igualdad social. Durante las últimas décadas, muchas lugares a lo largo del planeta han registrado una distancia cada vez mayor entre los barrios donde habita la población más rica y aquellos donde reside la población más pobre (Musterd *et al.*, 2017; van Ham *et al.*, 2021). Este fenómeno ocurre de forma paralela a un crecimiento de la desigualdad económica (OCDE, 2015): a medida que en la actualidad las diferencias en ingresos se amplifican, también crece la concentración dispar de la pobreza y la riqueza en distintas áreas de nuestras ciudades y pueblos.
+
+No es así casualidad que la segregación residencial haya emergido como una preocupación central en la sociedad. Entendida como la división espacial de una comunidad en base a características socioeconómicas, étnico-raciales o culturales, la segregación disminuye los posibles lugares de encuentros entre diferentes grupos sociales. De este modo, los habitantes de las localidades más segregadas tienden a mostrar menos capacidad de comprensión de los problemas del resto de personas (Cassiers y Kesteloot, 2012). Asimismo, la existencia de barrios con una concentración desproporcionada de hogares ricos o pobres favorece la aparición de diferencias en el acceso a bienes y servicios públicos en función del lugar de residencia. En último término, este fenómeno puede desencadenar un bucle de retroalimentación entre la segregación espacial y la desigualdad económica (Van Ham, Tammaru y Janssen, 2018).
+
+Por este motivo, la legislación española ha establecido distintos mecanismos para la reducción de la segregación. Entre ellos, se prevé la declaración de zonas de mercado residencial tensionado, donde pueden aplicarse medidas extraordinarias como limitaciones al precio del alquiler. Esta declaración requiere de un procedimiento preparatorio y un trámite de información pública para los que se debe recopilar y aportar la información que justifique la implementación de actuaciones excepcionales en el mercado de la vivienda. Conforme a lo establecido en el artículo 18.2 de la Ley 12/2023, de 24 de mayo, por el derecho a la vivienda, este informe presenta un estudio de la segregación socio-espacial en `r params$selected_municipality`.
+
+# Segregación socio-espacial y zonas de mercado residencial tensionado
+Los controles al precio del alquiler pueden suponer una herramienta efectiva para reducir la segregación residencial bajo determinadas condiciones (Glaeser, 2002; Öst, Söderberg & Wilhelmsson, 2014; Slater, 2021). En un escenario de subida generalizada del precio de la vivienda, el establecimiento de límites a los incrementos de las rentas por arrendamiento garantiza que parte del parque inmobiliario se mantenga accesible para la población con menos ingresos. Esta circunstancia resulta especialmente relevante en ciudades y pueblos donde la desigualdad económica sea alta o esté en aumento: una oferta insuficiente de vivienda asequible dificulta el mantenimiento y la atracción de hogares de menor riqueza. De esta forma, la declaración de una zona de mercado residencial tensionado estableciendo, entre otras medidas, controles al precio del alquiler puede constituir un instrumento adecuado para fomentar la mezcla social en `r params$selected_municipality`.
+
+# Metodología del informe
+Este informe realiza una análisis de la segregación socio-espacial en `r params$selected_municipality`. De este modo, se ha calculado el nivel de separación espacial entre diferentes grupos sociales desde el año 2015 hasta el año 2020. Por un lado, se ha estimado el nivel de segregación del segmento social más rico de la población frente al resto. En este caso, se consideran hogares ricos aquellos con ingresos superiores al 200% de la mediana de los ingresos en el conjunto de España. Por otro lado, este informe muestra asimismo el grado de segregación de los hogares con ingresos inferiores al umbral de la pobreza estatal respecto al resto de los habitantes de la localidad. Se indica, adicionalmente, el grado de segregación residencial de `r params$selected_municipality` en comparación con el resto de municipios del país.
+
+Este análisis mide la la segregación residencial a través del Índice de Disimilitud (Duncan & Duncan, 1955). Este índice calcula la proporción de la población de una determinada localidad que debería mudarse a otra parte del municipio para que todos los grupos sociales se distribuyesen homogéneamente por el territorio y viene dado por la siguiente fórmula:
+
+\[
+D = \frac{1}{2} \sum_{i=1}^{n} \left|\frac{x_i}{X} - \frac{y_i}{Y}\right|
+\]
+
+Donde:
+
+- \(D\) representa el Índice de Disimilitud.
+
+- \(x_i\) es la población del grupo de interés (bien los hogares con ingresos superiores al 200% de la mediana, bien los hogares por debajo del umbral de la pobreza) en una determinada sección censal (\(i\)) de `r params$selected_municipality`.
+
+- \(X\) es la población total del grupo de interés en `r params$selected_municipality`.
+
+- \(y_i\) es el resto de la población en una sección censal (\(i\)) de `r params$selected_municipality`.
+
+- \(Y\) es el resto de la población en el conjunto de `r params$selected_municipality`.
+
+```{r, echo = FALSE}
+# download the data
+high_income_not_round_out <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/High_Income_con_CCAA.csv")
+high_income <- high_income_not_round_out %>%
+  mutate(Dissimilarity_Index = round(Dissimilarity_Index, 4))
+
+# calculate the value of the levels of segregation for the overall summary
+levels_of_segregation <- high_income$Dissimilarity_Index[high_income$Municipality == params$selected_municipality & high_income$Year == 2020]
+
+# Check the value of Dissimilarity_Index and assign the appropriate value to 'summary_levels_of_segregation'
+if (levels_of_segregation >= 0.4) {
+  summary_levels_of_segregation <- "altos"
+} else if (levels_of_segregation >= 0.3 && levels_of_segregation <= 0.4) {
+  summary_levels_of_segregation <- "medianos"
+} else {
+  summary_levels_of_segregation <- "bajos"
+}
+
+# Calculate the rank order of the municipality
+  # Subset the data for the year 2020
+  subset_data <- subset(high_income_not_round_out, Year == 2020)
+  
+  # Calculate the rank order using the Dissimilarity_Index column
+  ranking <- rank(subset_data$Dissimilarity_Index)[subset_data$Municipality == params$selected_municipality]
+
+# Calculate the difference in segregation between 2015 and 2020
+levels_of_segregation_2015 <- high_income$Dissimilarity_Index[high_income$Municipality == params$selected_municipality & high_income$Year == 2015]
+difference <- levels_of_segregation_2015 - levels_of_segregation
+
+# Determine whether segregation has increased or not
+if (difference > 0) {
+  increase_decrease <- "disminuido"  # Difference is higher than 0
+} else {
+  increase_decrease <- "aumentado"  # Difference is lower than or equal to 0
+}
+
+# Calculate the absolute value of the difference
+absolute_value <- abs(difference)
+```
+# Situación de la segregación residencial en `r params$selected_municipality`
+`r params$selected_municipality` muestra unos niveles de segregación `r summary_levels_of_segregation`. Teniendo en cuenta la segregación de la población más rica (individuos con unos ingresos superiores al 200% de la mediana) respecto al resto de los habitantes de la localidad, el Índice de Disimilitud en este lugar se sitúa en un valor de `r levels_of_segregation` en 2020. Dentro de los 2204 municipios más poblados de España de los que se dispone información, `r params$selected_municipality` es la localidad `r ranking`° más segregada por nivel socio-económico. De 2015 a 2020, la segregación en `r params$selected_municipality` ha `r increase_decrease` en `r absolute_value` puntos.
+
+# Gráfico 1. Evolución de la segregación de la riqueza en `r params$selected_municipality`.
+```{r, echo = FALSE}
+data <- high_income %>% filter(Municipality == params$selected_municipality, Year >= 2015 & Year <= 2020)
+ggplot(data, aes(x = Year, y = Dissimilarity_Index)) +
+          geom_line() +
+          geom_text(aes(label = Dissimilarity_Index), vjust = -1) +
+          geom_point() +
+          xlab("Año") + ylab("Índice de Disimilitud") +
+          theme(
+            plot.margin = margin(15, 25, 10, 20, "pt")
+          ) +
+          expand_limits(y = max(data$Dissimilarity_Index) + 0.03)
+```
+Fuente: Elaboración propia a partir de los datos del Atlas de Distribución de Renta de los Hogares (ADRH) del Instituto Nacional de Estadística.
+``` {r, echo = FALSE}
+# download the data
+low_income_not_round_out <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/Low_Income_con_CCAA.csv")
+low_income <- low_income_not_round_out %>%
+  mutate(Dissimilarity_Index = round(Dissimilarity_Index, 4))
+
+# calculate the value of the levels of segregation of poverty
+levels_of_segregation_of_poverty <- low_income$Dissimilarity_Index[low_income$Municipality == params$selected_municipality & low_income$Year == 2020]
+
+# Check the value of Dissimilarity_Index and assign the appropriate value to 'summary_levels_of_segregation'
+if (levels_of_segregation_of_poverty >= 0.4) {
+  summary_levels_of_segregation_of_poverty <- "alto"
+} else if (levels_of_segregation_of_poverty >= 0.3 && levels_of_segregation_of_poverty <= 0.4) {
+  summary_levels_of_segregation_of_poverty <- "mediano"
+} else {
+  summary_levels_of_segregation_of_poverty <- "bajo"
+}
+
+# Calculate the rank order of the municipality for the segregation of poverty
+# Subset the data for the year 2020
+subset_data_02 <- subset(low_income_not_round_out, Year == 2020)
+  
+# Calculate the rank order using the Dissimilarity_Index column
+ranking_02 <- rank(subset_data_02$Dissimilarity_Index)[subset_data_02$Municipality == params$selected_municipality]
+  
+# Calculate the difference in segregation of poverty between 2015 and 2020
+levels_of_segregation_of_poverty_2015 <- low_income$Dissimilarity_Index[low_income$Municipality == params$selected_municipality & low_income$Year == 2015]
+difference_02 <- levels_of_segregation_of_poverty_2015 - levels_of_segregation_of_poverty
+
+# Determine whether segregation has increased or not
+if (difference_02 > 0) {
+  increase_decrease_02 <- "se ha reducido"  # Difference is higher than 0
+} else {
+  increase_decrease_02 <- "ha crecido"  # Difference is lower than or equal to 0
+}
+
+# Calculate the absolute value of the difference
+absolute_value_02 <- abs(difference_02)
+```
+
+Por otro lado, `r params$selected_municipality` registra un grado `r summary_levels_of_segregation_of_poverty` de segregación de la pobreza. De este modo, la segregación residencial de los individuos con ingresos bajo el umbral de la pobreza respecto al resto de la población alcanza, utilizando el Índice de Disimilitud, un valor de `r levels_of_segregation_of_poverty` en el año con los datos más recientes (2020). Del total de los municipios de España con información disponible (2204), `r params$selected_municipality` se sitúa en el puesto `r ranking_02` de las localidades más divididas espacialmente en lo relativo a la población pobre frente al resto de la comunidad. En comparación con 2015, la segregación de la pobreza `r increase_decrease_02` en `r absolute_value_02` puntos.
+
+# Gráfico 2. Evolución de la segregación de la pobreza en `r params$selected_municipality`.
+```{r, echo = FALSE}
+data <- low_income %>% filter(Municipality == params$selected_municipality, Year >= 2015 & Year <= 2020)
+ggplot(data, aes(x = Year, y = Dissimilarity_Index)) +
+          geom_line() +
+          geom_text(aes(label = Dissimilarity_Index), vjust = -1) +
+          geom_point() +
+          xlab("Año") + ylab("Índice de Disimilitud") +
+          theme(
+            plot.margin = margin(15, 25, 10, 20, "pt")
+          ) +
+          expand_limits(y = max(data$Dissimilarity_Index) + 0.03)
+```
+Fuente: Elaboración propia a partir de los datos del Atlas de Distribución de Renta de los Hogares (ADRH) del Instituto Nacional de Estadística.
+```{r, echo = FALSE}
+ratio_segregation <- levels_of_segregation / levels_of_segregation_of_poverty
+ratio_segregation <-round(ratio_segregation, 2)
+
+# Determine what kind of segregation is more prevalent
+if (ratio_segregation >= 0) {
+  kind_of_segregation <- "de la riqueza es mayor que la segregación de la pobreza" 
+} else {
+  kind_of_segregation <- "de la pobreza es mayor que la segregación de la riqueza"
+}
+
+# Determine what kind of segregation is more prevalent v.2
+if (ratio_segregation >= 0) {
+  kind_of_segregation_02 <- "más" 
+} else {
+  kind_of_segregation_02 <- "menos"
+}
+
+# ratio in 2015
+ratio_segregation_2015 <- levels_of_segregation_2015 / levels_of_segregation_of_poverty_2015
+ratio_segregation_2015 <-round(ratio_segregation_2015, 2)
+
+# difference between 2015 and 2020
+difference_ratio <- ratio_segregation - ratio_segregation_2015
+difference_ratio_abs <- abs(difference_ratio)
+
+# positive or negative difference
+if (difference_ratio >= 0) {
+  change_ratio <- "se ha incrementado" 
+} else {
+  change_ratio <- "se ha reducido"
+}
+
+# Determine what kind of segregation was more prevalent in 2015
+if (ratio_segregation_2015 >= 0) {
+  kind_of_segregation_03 <- "más" 
+} else {
+  kind_of_segregation_03 <- "menos"
+}
+```
+
+De este análisis se desprende que en `r params$selected_municipality` la segregación `r kind_of_segregation`. En concreto, los hogares con mayores ingresos se encuentran `r ratio_segregation` veces `r kind_of_segregation_02` segregados que la población más pobre en esta localidad. Esta ratio `r change_ratio` en `r difference_ratio_abs` puntos desde 2015, cuando la población más rica se encontraba `r ratio_segregation_2015` veces `r kind_of_segregation_03` segregada que la población bajo el umbral de la pobreza en `r params$selected_municipality`.
+
+``` {r, echo = FALSE}
+
+if ((levels_of_segregation >= 0.4 && difference < 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación altos. Además, el grado de separación entre la población con mayores y menores ingresados ha aumentado en el periodo de referencia (2015-2020). En concreto, la segregación residencial se ha incrementado especialmente en el caso de los hogares de mayor renta, que se concentran cada vez más en áreas con menor mezcla social con vecinos con ingresos más bajos. Como consecuencia, la declaración de ",params$selected_municipality," como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.4 && difference < 0 && ratio_segregation <= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación altos. Además, el grado de separación entre la población con mayores y menores ingresados ha aumentado en el periodo de referencia (2015-2020). En concreto, la segregación residencial se ha incrementado especialmente en el caso de los hogares de mayor renta, que se concentran cada vez más en áreas con menor mezcla social con vecinos con ingresos más bajos. Como consecuencia, la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.4 && difference > 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación medianos. Durante el el periodo de referencia (2015-2020), el grado de separación entre la población con mayores y menores ingresados ha aumentado. En concreto, la segregación residencial se ha incrementado especialmente en el caso de los hogares de mayor renta, que se concentran cada vez más en áreas con menor mezcla social con vecinos con ingresos más bajos. Como consecuencia, la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.4 && difference > 0 && ratio_segregation <= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación medianos. Durante el el periodo de referencia (2015-2020), el grado de separación entre la población con mayores y menores ingresados ha aumentado. En concreto, la segregación residencial se ha incrementado especialmente en el caso de los hogares de mayor renta, que se concentran cada vez más en áreas con menor mezcla social con vecinos con ingresos más bajos. Como consecuencia, la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.3 && levels_of_segregation < 0.4 && difference < 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación medianos. Durante el periodo de referencia (2015-2020), el grado de separación entre la población con mayores y menores ingresados ha aumentado. En concreto, la segregación residencial se ha incrementado especialmente en el caso de los hogares de mayor renta, que se concentran cada vez más en áreas con menor mezcla social con vecinos con ingresos más bajos. Como consecuencia, la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.3 && levels_of_segregation < 0.4 && difference < 0 && ratio_segregation <= 0)) {
+  text_conclusion <- paste(params$selected_municipality, " presenta unos niveles de segregación medianos. Durante el periodo de referencia (2015-2020), el grado de separación entre la población con mayores y menores ingresados ha aumentado. Aunque la segregación residencial ha aumentado especialmente en lo relativo a los hogares más pobres, la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede constituir una herramienta para garantizar la preservación de una oferta asequible por todo el término municipal y favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.3 && levels_of_segregation < 0.4 && difference > 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste("El grado de separación entre la población con mayores y menores ingresados ha disminuido durante el periodo de referencia (2015-2020) en ", params$selected_municipality, ". Sin embargo, los niveles de segregación continúan siendo considerables y alcanzan especial intensidad en lo relativo a la población más rica. La declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado puede así contemplarse como una herramienta para favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation >= 0.3 && levels_of_segregation < 0.4 && difference > 0 && ratio_segregation <= 0)) {
+  text_conclusion <- paste("El grado de separación entre la población con mayores y menores ingresados ha disminuido durante el periodo de referencia (2015-2020) en", params$selected_municipality,". Sin embargo, los niveles de segregación continúan siendo considerables. La declaración de ", params$selected_municipality," como una zona de mercado residencial tensionado puede así contemplarse como una herramienta para favorecer la cohesión social y territorial de la localidad.")
+} else if ((levels_of_segregation < 0.3 && difference < 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste("La segregación residencial en", params$selected_municipality," es baja. Sin embargo, los niveles de separación especial entre grupos sociales han crecido en el periodo analizado (2015-2020), en especial entre los hogares de mayores ingresos y el resto de la población. La declaración de", params$selected_municipality, "como una zona de mercado residencial tensionado puede constituir una fórmula preventiva de futuros incrementos de desigualdades terrotoriales, atendiendo al resto de características sociodemográficas de la localidad y a la situación del mercado de la vivienda.")
+} else if ((levels_of_segregation < 0.3 && difference < 0 && ratio_segregation <= 0)) {
+  text_conclusion <- paste("La segregación residencial en", params$selected_municipality," es baja. Sin embargo, los niveles de separación especial entre grupos sociales han crecido en el periodo analizado (2015-2020). La declaración de ", params$selected_municipality," como una zona de mercado residencial tensionado puede contemplarse de este modo como una fórmula preventiva de futuros incrementos de desigualdades terrotoriales, atendiendo al resto de características sociodemográficas de la localidad y a la situación del mercado de la vivienda.")
+} else if ((levels_of_segregation < 0.3 && difference > 0 && ratio_segregation >= 0)) {
+  text_conclusion <- paste("La segregación residencial en", params$selected_municipality, " es baja. Asimismo, los niveles de separación especial entre grupos sociales han disminuido en el periodo analizado (2015-2020). A la luz de este análisis, la segregación socio-espacial no constituye un elemento de motivación para la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado, sin perjuicio de que ésta resulte necesaria atendiendo a otras motivos.")
+} else {
+  text_conclusion <- paste("La segregación residencial en ", params$selected_municipality," es baja. Asimismo, los niveles de separación especial entre grupos sociales han disminuido en el periodo analizado (2015-2020). A la luz de este análisis, la segregación socio-espacial no constituye un elemento de motivación para la declaración de ", params$selected_municipality, " como una zona de mercado residencial tensionado, sin perjuicio de que ésta resulte necesaria atendiendo a otros motivos.")
+}
+```
+
+# Conclusión
+`r text_conclusion`
+
+# Referencias:
+  
+  Cassiers, T., & Kesteloot, C. (2012). Socio-spatial inequalities and social cohesion in European cities. *Urban Studies*, 49(9), 1909-1924.
+  
+  Duncan, O. D., & Duncan, B. (1955). A methodological analysis of segregation indexes. *American Sociological Review*, 20(2), 210-217.
+  
+  Glaeser, E. L. (2002). Does rent control reduce segregation?. *Available at SSRN 348084*.
+  
+  Malmberg, B., Andersson, E., & Östh, J. (2013). Segregation and urban unrest in Sweden. *Urban Geography*, 34(7), 1031-1046.
+  
+  Musterd, S., Marcińczak, S., Van Ham, M., & Tammaru, T. (2017). Socioeconomic segregation in European capital cities. Increasing separation between poor and rich. *Urban Geography*, 38(7), 1062-1083.
+  
+  Öst, C. E., Söderberg, B., & Wilhelmsson, M. (2014). Household allocation and spatial distribution in a market under (“soft”) rent control. *Journal of Policy Modeling*, 36(2), 353-372.
+  
+  Slater, T. (2021). From displacements to rent control and housing justice. *Urban Geography*, 42(5), 701-712.
+  
+  Van Ham, M., Tammaru, T., & Janssen, H. J. (2018). A multi-level model of vicious circles of socio-economic segregation. *Divided cities: understanding intra-urban disparities. OECD, Paris.*
+  
+  Van Ham, M., Tammaru, T., Ubarevičienė, R., & Janssen, H. (2021). Rising inequalities and a changing social geography of cities. An introduction to the global segregation book. In *Urban Socio-Economic Segregation and Income Inequality* (pp. 3-26). Springer, Cham.
