@@ -1,0 +1,107 @@
+# este código genera la base de datos a partir de los datos del INE
+
+library(readr)
+library(dplyr)
+library(seg)
+library(ggplot2)
+
+# download the files in https://www.ine.es/componentes_inebase/ADRH_total_nacional.htm
+# first file is in https://www.ine.es/jaxiT3/dlgExport.htm?t=30829&nocab=1
+# second file is in https://www.ine.es/jaxiT3/dlgExport.htm?t=30832&nocab=1
+
+Database_01 <- read_delim("", delim = ";", escape_double = FALSE, trim_ws = TRUE) # insert the path to the INE file in your own computer in the "" 
+Database_02 <- read_delim("", delim = ";", escape_double = FALSE, trim_ws = TRUE) # insert the path to the INE file in your own computer in the "" 
+
+# Remove all rows with missing values in the "Secciones" column
+Database_01 <- Database_01[complete.cases(Database_01$Secciones), ]
+Database_02 <- Database_02[complete.cases(Database_02$Secciones), ]
+
+# Filter the rows that have "Total" in the "Sexo" column in Database_01
+Database_01 <- Database_01[Database_01$Sexo == "Total", ]
+
+# Filter out the rows that we are not interested in from Database_02
+Database_02 <- Database_02[Database_02$`Indicadores demográficos` == "Población", ]
+
+# Create a third database with only the values of the population under the poverty line
+Low_Income <- Database_01[Database_01$`Distribución de la renta por unidad de consumo` == "Población con ingresos por unidad de consumo por debajo 60% de la mediana", ]
+
+# Create a fourth database with only the values of the population well above the median income (200% of the median income)
+High_Income <- Database_01[Database_01$`Distribución de la renta por unidad de consumo` == "Población con ingresos por unidad de consumo por encima 200% de la mediana", ]
+
+# we add the absolute population values into both the third and fourth database
+High_Income_Complete <- merge(x = High_Income, y = Database_02, by.x = c("Secciones", "Periodo", "Municipios", "Distritos"), by.y = c("Secciones", "Periodo", "Municipios", "Distritos"), all = TRUE)
+Low_Income_Complete <- merge(x = Low_Income, y = Database_02, by.x = c("Secciones", "Periodo", "Municipios", "Distritos"), by.y = c("Secciones", "Periodo", "Municipios", "Distritos"), all = TRUE)
+
+# Delete the superflous columns using subset()
+High_Income_Complete <- subset(High_Income_Complete, select = -c(Sexo, `Indicadores demográficos`))
+Low_Income_Complete <- subset(Low_Income_Complete, select = -c(Sexo, `Indicadores demográficos`))
+
+# Rename the "Total.x" and "Total.y" columns using rename()
+High_Income_Complete <- High_Income_Complete %>% 
+  rename(`Población por encima del doble de la mediana (%)` = Total.x,
+         `Población total` = Total.y)
+
+Low_Income_Complete <- Low_Income_Complete %>% 
+  rename(`Población bajo el umbral de la pobreza (%)` = Total.x,
+         `Población total` = Total.y)
+
+# Transform commas into dots
+High_Income_Complete$`Población por encima del doble de la mediana (%)` <- 
+  gsub(",", ".", High_Income_Complete$`Población por encima del doble de la mediana (%)`)
+Low_Income_Complete$`Población bajo el umbral de la pobreza (%)` <- 
+  gsub(",", ".", Low_Income_Complete$`Población bajo el umbral de la pobreza (%)`)
+
+# Remove the dots from the "Población total" column using gsub()
+High_Income_Complete$`Población total` <- gsub("\\.", "", High_Income_Complete$`Población total`)
+Low_Income_Complete$`Población total` <- gsub("\\.", "", Low_Income_Complete$`Población total`)
+
+# Convert the columns to numeric format using as.numeric()
+High_Income_Complete$`Población por encima del doble de la mediana (%)` <- as.numeric(High_Income_Complete$`Población por encima del doble de la mediana (%)`)
+High_Income_Complete$`Población total` <- as.numeric(High_Income_Complete$`Población total`)
+Low_Income_Complete$`Población bajo el umbral de la pobreza (%)` <- as.numeric(Low_Income_Complete$`Población bajo el umbral de la pobreza (%)`)
+Low_Income_Complete$`Población total` <- as.numeric(Low_Income_Complete$`Población total`)
+
+
+# Create new columns with the absolute values of the population groups of interest using mutate()
+High_Income_Complete <- High_Income_Complete %>% 
+  mutate(`Población por encima del 200% de la mediana` = (`Población por encima del doble de la mediana (%)`/100) * `Población total`)
+Low_Income_Complete <- Low_Income_Complete %>% 
+  mutate(`Población bajo el umbral de la pobreza` = (`Población bajo el umbral de la pobreza (%)`/100) * `Población total`)
+
+# Combine the two databases
+Complete_Database <- merge(x = High_Income_Complete, y = Low_Income_Complete, by.x = c("Secciones", "Periodo", "Municipios", "Distritos", "Población total"), by.y = c("Secciones", "Periodo", "Municipios", "Distritos", "Población total"), all = TRUE)
+
+# Remove the first six characters from the "Municipios" column
+Complete_Database$Municipios <- substr(Complete_Database$Municipios, 7, nchar(Complete_Database$Municipios))
+
+# Calculate the number of people *not* above the 200% of the median income
+Complete_Database <- Complete_Database %>%
+  mutate(`Población por debajo del 200% de la mediana` = (1 - (`Población por encima del doble de la mediana (%)` / 100)) * `Población total`)
+
+# Reorder the columns so that "Población por encima del 200% de la mediana" and "Población bajo el umbral de la pobreza" are the first two columns
+Complete_Database <- select(Complete_Database,
+                            "Población por encima del 200% de la mediana", 
+                            "Población por debajo del 200% de la mediana", 
+                            everything()
+)
+
+# delete rows with missing values
+Complete_Database <- na.omit(Complete_Database)
+
+# create empty dataframe to store results
+results <- data.frame(Municipality = character(), Year = integer(), Dissimilarity_Index = numeric(), stringsAsFactors = FALSE)
+
+# loop through all unique municipalities and years to calculate segregation indexes
+for (muni in unique(Complete_Database$Municipios)) {
+  for (yr in unique(Complete_Database$Periodo)) {
+    subset_df <- Complete_Database[Complete_Database$Municipios == muni & Complete_Database$Periodo == yr, ]
+    if (nrow(subset_df) > 1) {
+      dissimilarity <- seg(subset_df)
+      result_row <- data.frame(Municipality = muni, Year = yr, Dissimilarity_Index = dissimilarity)
+      results <- rbind(results, result_row)
+    }
+  }
+}
+
+# Download the file
+write.csv(results, "dissimilarity_results.csv", row.names = FALSE)
