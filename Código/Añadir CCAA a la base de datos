@@ -1,1 +1,13 @@
+library(readxl)
+library(dplyr)
+Municipios_y_CCAA <- read_excel("~/Desktop/Visor Ley de Vivienda/Municipios y CCAA_modificado.xlsx")
 
+# Load the data from the CSV files
+high_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/High_Income_Database.csv")
+low_income <- read.csv("https://raw.githubusercontent.com/javisanmillan/VisorLeyDeVivienda/main/Processed%20data/Low_Income_Database.csv")
+
+High_Income_CCAA <- merge(high_income, Municipios_y_CCAA, by.x = "Municipality",  by.y = "Municipio", all.x = TRUE, all.y = FALSE)
+Low_Income_CCAA <- merge(low_income, Municipios_y_CCAA, by.x = "Municipality",  by.y = "Municipio", all.x = TRUE, all.y = FALSE)
+
+write.csv(High_Income_CCAA, "High_Income_con_CCAA.csv", row.names = FALSE)
+write.csv(Low_Income_CCAA, "Low_Income_con_CCAA.csv", row.names = FALSE)
